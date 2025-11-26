@@ -210,6 +210,63 @@ process DESEQ2 {
 }
 
 /*
+ * 8) Annotation GFF → DESeq2 annoté
+ */
+process ANNOTATE_GENES {
+
+    tag "annotate"
+    publishDir "${params.outdir}/deseq2", mode: 'copy'
+    container "bioconductor/bioconductor_docker:RELEASE_3_17"
+
+    input:
+        path deseq
+        path gff
+
+    output:
+        path "deseq2_results_annotated.csv", emit: annotated
+        path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript scripts/annotate_genes.R \
+        $deseq \
+        $gff \
+        deseq2_results_annotated.csv
+    echo "Rscript: `Rscript --version | head -1`" > versions.yml
+    """
+}
+
+/*
+ * 9) Analyse des pathways KEGG
+ */
+process PATHWAYS {
+
+    tag "pathways"
+    publishDir "${params.outdir}/pathways", mode: 'copy'
+    container "bioconductor/bioconductor_docker:RELEASE_3_17"
+
+    input:
+        path annotated
+
+    output:
+        path "kegg_pathways_up.csv"
+        path "kegg_pathways_down.csv"
+        path "kegg_up_barplot.png"
+        path "kegg_down_barplot.png"
+        path "versions.yml", emit: versions
+
+    script:
+    """
+    Rscript scripts/run_pathways.R \
+        $annotated \
+        pathways_results
+
+    cp pathways_results/* .
+    echo "Rscript KEGG: `Rscript --version | head -1`" > versions.yml
+    """
+}
+
+/*
  * Workflow principal
  */
 workflow {
@@ -233,5 +290,9 @@ workflow {
     all_counts = counts_ch.collect()
 
     samples_ch.collect().set { samples_metadata }
-    DESEQ2(all_counts, samples_metadata)
+    deseq_results = DESEQ2(all_counts, samples_metadata).results
+    annotated_ch  = ANNOTATE_GENES(deseq_results, gff_ch).annotated
+    PATHWAYS(annotated_ch)
+
 }
+
