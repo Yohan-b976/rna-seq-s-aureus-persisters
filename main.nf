@@ -198,7 +198,7 @@ process DESEQ2 {
 
     script:
     """
-    Rscript /scripts/run_deseq2.R ${counts_files.join(" ")} deseq2_results.csv
+    Rscript /scripts/run_deseq2.R $baseDir/samples.tsv ${counts_files.join(" ")} deseq2_results.csv
     echo "Rscript: `Rscript --version | head -1`" > versions.yml
     """
 
@@ -318,6 +318,7 @@ workflow {
     PATHWAYS(annotated_ch)
     PLOT_DESEQ2(deseq_results)
 }
+
 
 
 
