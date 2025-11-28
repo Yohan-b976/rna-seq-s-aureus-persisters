@@ -267,6 +267,29 @@ process PATHWAYS {
 }
 
 /*
+ * 10) Visualisation des résultats DESeq2
+ */
+process PLOT_DESEQ2 {
+    publishDir "${params.outdir}/deseq2/plots", mode: 'copy'
+    container "alantrbt/deseq2:latest"
+
+    input:
+        path deseq_results
+
+    output:
+        path "deseq2_plot.png", emit: plot
+        path "versions.yml", emit: versions
+
+    script:
+    """
+    # Correction : si 'gene_name' n'existe pas, on remplace par 'gene_id' dans le script
+    sed 's/gene_name/gene_id/g' /scripts/plot_deseq2.R > plot_deseq2_tmp.R
+    Rscript plot_deseq2_tmp.R $deseq_results deseq2_plot.png
+    echo "Rscript: `Rscript --version | head -1`" > versions.yml
+    """
+}
+
+/*
  * Workflow principal
  */
 workflow {
@@ -295,5 +318,6 @@ workflow {
     PATHWAYS(annotated_ch)
     PLOT_DESEQ2(deseq_results)
 }
+
 
 
