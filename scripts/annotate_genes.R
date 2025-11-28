@@ -1,4 +1,7 @@
 #!/usr/bin/env Rscript
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+    install.packages("dplyr", repos = "https://cloud.r-project.org/")
+}
 
 suppressPackageStartupMessages({
     library(dplyr)
