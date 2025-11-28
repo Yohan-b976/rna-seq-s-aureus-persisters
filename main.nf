@@ -293,6 +293,7 @@ workflow {
     deseq_results = DESEQ2(all_counts, samples_metadata).results
     annotated_ch  = ANNOTATE_GENES(deseq_results, gff_ch).annotated
     PATHWAYS(annotated_ch)
-
+    PLOT_DESEQ2(deseq_results)
 }
+
 
