@@ -20,6 +20,9 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
 
 RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
 
+# Installation du package R ggrepel (pour PLOT_DESEQ2)
+RUN R -e "install.packages('ggrepel', repos='https://cloud.r-project.org/')"
+
 ENV PATH="/opt/conda/envs/base/bin:/opt/conda/bin:$PATH"
 
 WORKDIR /data
