@@ -18,7 +18,7 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
     && micromamba clean -a -y
 
 
-RUN apt-get update && apt-get install -y procps && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y procps libxml2-dev libcurl4-openssl-dev libssl-dev && rm -rf /var/lib/apt/lists/*
 
 # Installation du package R ggrepel (pour PLOT_DESEQ2)
 RUN R -e "install.packages('ggrepel', repos='https://cloud.r-project.org/')"
