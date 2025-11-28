@@ -20,10 +20,10 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda \
 
 RUN apt-get update && apt-get install -y procps libxml2-dev libcurl4-openssl-dev libssl-dev && rm -rf /var/lib/apt/lists/*
 
-# Installation des dépendances système et R pour devtools et ggrepel
-RUN apt-get update && apt-get install -y procps git libxml2-dev libcurl4-openssl-dev libssl-dev && rm -rf /var/lib/apt/lists/*
-RUN R -e "install.packages(c('curl','httr','openssl','mime','R6','jsonlite','digest','withr','memoise','askpass','pkgbuild','pkgload','roxygen2','desc','sessioninfo','rstudioapi','callr','processx','ps','remotes'), repos='https://cloud.r-project.org/')"RUN R -e "install.packages('devtools', repos='https://cloud.r-project.org/')"
-RUN R -e "devtools::install_version('ggrepel', version = '0.8.0', repos = 'https://cloud.r-project.org/')"
+# Installation des packages R figés depuis les archives CRAN
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/ggplot2/ggplot2_3.0.0.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/dplyr/dplyr_0.7.8.tar.gz', repos=NULL, type='source')"
+RUN R -e "install.packages('https://cran.r-project.org/src/contrib/Archive/ggrepel/ggrepel_0.8.2.tar.gz', repos=NULL, type='source')"
 
 ENV PATH="/opt/conda/envs/base/bin:/opt/conda/bin:$PATH"
 
