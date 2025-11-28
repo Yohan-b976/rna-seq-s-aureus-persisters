@@ -228,7 +228,7 @@ process ANNOTATE_GENES {
 
     script:
     """
-    Rscript scripts/annotate_genes.R \
+    Rscript /scripts/annotate_genes.R \
         $deseq \
         $gff \
         deseq2_results_annotated.csv
@@ -257,7 +257,7 @@ process PATHWAYS {
 
     script:
     """
-    Rscript scripts/run_pathways.R \
+    Rscript /scripts/run_pathways.R \
         $annotated \
         pathways_results
 
