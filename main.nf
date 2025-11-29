@@ -190,7 +190,7 @@ process DESEQ2 {
 
     input:
         path counts_files
-        val samples_metadata
+        path samples_file
 
     output:
         path "deseq2_results.csv", emit: results
@@ -312,8 +312,8 @@ workflow {
 
     all_counts = counts_ch.collect()
 
-    samples_ch.collect().set { samples_metadata }
-    deseq_results = DESEQ2(all_counts, samples_metadata).results
+    samples_file_ch = Channel.of(file("$baseDir/samples.tsv"))
+    deseq_results = DESEQ2(all_counts, samples_file_ch).results
     annotated_ch  = ANNOTATE_GENES(deseq_results, gff_ch).annotated
     PATHWAYS(annotated_ch)
     PLOT_DESEQ2(deseq_results)
