@@ -33,7 +33,7 @@ read_fc <- function(file) {
     df <- read.table(file, header = TRUE, sep = "\t", comment.char = "#")
     # Keep only gene ID and counts
     df <- df[, c("Geneid", grep("^\\S+\\.bam$", names(df), value = TRUE))]
-    names(df)[2] <- file  # label column by filename
+    names(df)[2] <- gsub(".*counts_|\\.txt$", "", file)
     return(df)
 }
 
