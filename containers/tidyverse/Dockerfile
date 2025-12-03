@@ -18,6 +18,7 @@ RUN micromamba install -y -n base -c conda-forge -c bioconda -c r \
     r-tidyverse \
     r-venndiagram \
     r-ggrepel \
+    r-scales \
     && micromamba clean -a -y
 
 ENV PATH="/opt/conda/envs/base/bin:/opt/conda/bin:$PATH"
