@@ -65,7 +65,7 @@ res_all <- res %>%
     )
   )
 
-pdf("MA_plot_all_genes.pdf", family = "ArialMT", title = "MA Plot")
+pdf("MA_plot_all_genes.pdf")
 
 p <- ggplot(res_all, aes(
   x = baseMean,            # mean normalized count sur l'axe x
