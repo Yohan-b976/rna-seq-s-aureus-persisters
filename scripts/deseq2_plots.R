@@ -74,7 +74,7 @@ p <- ggplot(res_all, aes(
   shape = factor(shape_point)
 )) +
   geom_point(size = 2, stroke = 1, alpha = 0.7) +
-  scale_color_manual(values = c("Significatif" = "red", "Non significatif" = "black")) +
+  scale_color_manual(values = c("Non-Significant" = "grey50", "Significant" = "red")) +
   labs(
     x = "Mean of normalized counts",
     y = "Log2 fold change",
