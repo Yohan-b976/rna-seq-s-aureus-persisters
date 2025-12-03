@@ -23,6 +23,5 @@ gene_pathway= data.frame(Gene_ID, Pathway_ID)
 gene_pathway = aggregate(. ~ Gene_ID, data = gene_pathway, FUN = function(x) paste(unique(x), collapse = ";"))
 
 # Enregistrement de la table
-write.table(gene_pathway, file = file.path(out_dir,"gene_pathway.tsv"),
-            sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(gene_pathway, file = file.path(out_dir,"gene_pathway.tsv"), sep = "\t", row.names = FALSE, quote = FALSE)
 

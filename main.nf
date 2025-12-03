@@ -216,7 +216,7 @@ process ANALYSIS_DESEQ2 {
     publishDir "${params.outdir}/deseq2", mode: 'copy'
 
     input:
-    file deseq2_results
+    file deseq_results
     path mapping_file
 
 
@@ -231,7 +231,7 @@ process ANALYSIS_DESEQ2 {
 
     # Plots
     Rscript /scripts/deseq2_plots.R \
-        ${deseq2_results} \
+        ${deseq_results} \
         gene_pathway.tsv \
         ${mapping_file} 
     """
@@ -265,9 +265,8 @@ workflow {
     deseq_results = DESEQ2(all_counts, samples_file_ch).results
 
     ANALYSIS_DESEQ2(
-    deseq2_results,
-    file(params.aureowiki)
-)
+    deseq_results,
+    file(params.aureowiki))
 
 }
 

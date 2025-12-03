@@ -3,21 +3,24 @@
 # ----------------------------------------------
 # Graphiques
 # ----------------------------------------------
-
+if (!requireNamespace("scales", quietly = TRUE)) {
+    install.packages("scales", repos = "https://cloud.r-project.org")
+}
 library(ggplot2)
 library(ggrepel)
+library(tidyverse)
+
 
 # ==== Arguments Nextflow ====
 args <- commandArgs(trailingOnly = TRUE)
 deseq_results_path  <- args[1]
 gene_pathway <- args[2]
-mapping_path        <- args[3]
+link_path        <- args[3]
 
-# Lire résultats deseq
+# -----------Chargement des données-----------
 res <- read.csv(deseq_results_path,row.names = "gene_id")
+rownames(res) <- sub("^gene-", "", rownames(res))
 
-
-# Lire table kegg 
 kegg_all <- read.table(
   gene_pathway,
   header = TRUE,
@@ -25,9 +28,8 @@ kegg_all <- read.table(
   stringsAsFactors = FALSE
 )
 
-# Lire table de mapping
-mapping <- read.table(
-  mapping_path,
+link <- read.table(
+  link_path,
   header = TRUE,
   sep = "\t",
   quote = "",
@@ -36,40 +38,92 @@ mapping <- read.table(
   check.names = F
 )
 
-# On ajoute 'pth' à la main car il n'est pas présent dans la table d'origine
-mapping[mapping$product == "peptidyl-tRNA hydrolase", ]$symbol="pth"
+
+link[link$product == "peptidyl-tRNA hydrolase", ]$symbol="pth"
 
 
-# === Préparation du dataframe pour le plot : ===
-# Compute le log2base mean pour les abscisses (si diff de 0)
+# Ajout du mask sur les données
 res$log2BaseMean <- ifelse(res$baseMean > 0, log2(res$baseMean), NA)
-# colonne significatif / non significatif 
 res$is_sig <- !is.na(res$padj) & res$padj < 0.05
 res$signif <- ifelse(res$is_sig, "Significant", "Non-Significant")
-# ===============================================
+
+# -----------Premier plot-----------
+
+limit <- 4
 
 
-# == On merge les dataframes : ==
-# On concatène les colonnes du mapping sur les résultats DESeq
+res_all <- res %>%
+  mutate(
+    # Clamp log2FC entre -limit et +limit
+    log2FC_clamped = pmax(pmin(log2FoldChange, limit), -limit),
+
+    shape_point = case_when(
+      log2FoldChange < -limit ~ 25,   # triangle pointe vers le bas (dépassement négatif)
+      log2FoldChange > limit  ~ 17,   # triangle pointe vers le haut (dépassement positif)
+      TRUE                    ~ 16    # point rond normal
+    )
+  )
+
+pdf("MA_plot_all_genes.pdf", family = "ArialMT", title = "MA Plot")
+
+p <- ggplot(res_all, aes(
+  x = baseMean,            # mean normalized count sur l'axe x
+  y = log2FC_clamped,      # log2FC clampé sur y
+  color = signif,          # variable de signification
+  shape = factor(shape_point)
+)) +
+  geom_point(size = 2, stroke = 1, alpha = 0.7) +
+  scale_color_manual(values = c("Significatif" = "red", "Non significatif" = "black")) +
+  labs(
+    x = "Mean of normalized counts",
+    y = "Log2 fold change",
+    color = "Significativité (p-adj < 0.05)"
+  ) +
+  scale_y_continuous(limits = c(-limit, limit)) +
+  scale_x_log10() +     
+  theme_minimal() +
+  labs(x = "Mean Normalized Count", y = "Log2 Fold Change")
+# Légende
+p <- p + theme(
+  legend.box = "horizontal"
+)
+p <- p + guides(
+  color = guide_legend(order = 1),
+  shape = guide_legend(order = 2)
+)
+p <- p + theme(
+  legend.position = c(0.32, 0.08),
+  legend.background = element_blank(),
+  legend.box.background = element_blank(),
+  legend.key = element_blank()
+)
+p <- p + guides(shape = "none")
+p <- p + scale_x_log10(
+  breaks = trans_breaks("log10", function(x) 10^x),
+  labels = trans_format("log10", math_format(10^.x))
+)
+print(p)
+dev.off()
+
+
+
+# -----------Second plot-----------
+
+# Préparation des données et identifications des gènes liés à la traduction
+
 res$locus_tag <- rownames(res)
-res_annot <- merge(res, mapping,
-                   by = "locus_tag",
-                   all.x = TRUE)
+res_annot <- merge(res, link, by = "locus_tag", all.x = TRUE)
 
-# On rajoute les colonnes du kegg_file pour les pathways 
-colnames(kegg_all)<-c("locus_tag","Pathway_ID")
-res_annot <- merge(res_annot, kegg_all,
-                   by = "locus_tag",
-                   all.x = TRUE)
-# ===============================
+colnames(kegg_all)<- c("locus_tag","Pathway_ID")
+res_annot <- merge(res_annot, kegg_all, by = "locus_tag", all.x = TRUE)
 
+# Sélection de pathways 
 
-
-# === Sélection de pathways ===
-
-# Les gènes en lien avec la traduction sont : 
-# sao03011 : Ribosome, sao03009 : Ribosome biogenesis, sao03016 : Transfer RNA biogenesis, sao03012 : Translation factors
-# On les trouve dans BRITE
+# Gènes de traductions : 
+# sao03011 : Ribosome,
+#sao03009 : Ribosome biogenesis,
+# sao03016 : Transfer RNA biogenesis,
+# sao03012 : Translation factors
 
 translation_genes = !is.na(res_annot$Pathway_ID) &
   (grepl("(^|;)sao03011(;|$)", res_annot$Pathway_ID) |
@@ -85,40 +139,37 @@ AA_tRNA_synthetases = !is.na(res_annot$Pathway_ID) &
 
 res_annot$is_AA_tRNA <- AA_tRNA_synthetases
 
-# Typical genes 
-typical_members = subset(
-  res_annot,
-  symbol %in% c("pth", "infA", "infB", "infC", "frr", "tsf")
-)
+
+tRNAsyn = subset( res_annot, symbol %in% c("infA", "infB", "frr", "infC", "tsf", "pth"))
 
 
-# ===== MA-PLOT TRANSLATION GENES =====
+# Plot
+
 plot_df=res_annot[translation_genes, ]
 
-pdf("MA_plot_translationgenes.pdf")
+pdf("MA_plot_of_genes_related_to_translation.pdf")
 p <- ggplot(
   data = plot_df,
   aes(x = log2BaseMean, y = log2FoldChange, color = signif)
 ) +
   
-  # Tous les gènes de traduction (gris / rouge)
+  # couleurs (gris / rouge)
   geom_point(alpha = 0.8, size = 1.2) +
   
-  # Cercle noir autour des AA-tRNA synthetases (restreint aux translation_genes)
   geom_point(
     data = subset(plot_df, is_AA_tRNA),
     aes(shape = "AA_tRNA_synthetases"),
     color = "black", size = 1.3, stroke = 1.3
   ) +
   
-  # Couleurs gris / rouge
-  scale_color_manual(values = c("Non-Significant" = "grey70",
-                                "Significant" = "red")) +
+
+  scale_color_manual(values = c("Non-Significant" = "grey50", "Significant" = "red")) +
   
+
   # Cercle vide pour les AA-tRNA
   scale_shape_manual(values = c("AA_tRNA_synthetases" = 1)) +
   
-  # Axes
+  # Axes du plot
   scale_x_continuous(
     limits = c(0, 20),
     breaks = seq(0, 20, by = 2),
@@ -130,9 +181,9 @@ p <- ggplot(
     expand = c(0, 0)
   )+
   
-  # Labels des gènes typiques
+
   geom_text_repel(
-    data = typical_members,
+    data = tRNAsyn,
     aes(x = log2BaseMean, y = log2FoldChange, label = symbol),
     inherit.aes = FALSE,       
     fontface = "italic",
@@ -144,7 +195,7 @@ p <- ggplot(
     point.padding = 0
   )+
 
-  # Ligne horizontale
+  # Dashed line
   geom_hline(yintercept = 0, linetype = "dashed") +
   
   labs(
@@ -162,7 +213,7 @@ p <- ggplot(
 ) 
 
 
-# Gestion de la légende
+# Légende
 p <- p + theme(
   legend.box = "horizontal"
 )
@@ -180,5 +231,4 @@ p <- p + theme(
 )
 print(p)
 dev.off()
-#======================================
 
