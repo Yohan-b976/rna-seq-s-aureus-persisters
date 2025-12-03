@@ -198,7 +198,7 @@ process DESEQ2 {
 
     script:
     """
-    Rscript /scripts/run_deseq2.R $baseDir/samples.tsv ${counts_files.join(" ")} deseq2_results.csv
+    Rscript /scripts/run_deseq2.R ${samples_file} ${counts_files.join(" ")} deseq2_results.csv
     echo "Rscript: `Rscript --version | head -1`" > versions.yml
     """
 
@@ -210,91 +210,40 @@ process DESEQ2 {
 }
 
 /*
- * 8) Annotation GFF → DESeq2 annoté
+ * 8) Analyses et plots des gènes
  */
-process ANNOTATE_GENES {
-
-    tag "annotate"
+process ANALYSIS_DESEQ2 {
     publishDir "${params.outdir}/deseq2", mode: 'copy'
-    container "bioconductor/bioconductor_docker:RELEASE_3_17"
 
     input:
-        path deseq
-        path gff
+    file deseq_results
+    path mapping_file
+
 
     output:
-        path "deseq2_results_annotated.csv", emit: annotated
-        path "versions.yml", emit: versions
+    path "*.pdf"
+    path "*.tsv"
 
     script:
     """
-    Rscript /scripts/annotate_genes.R \
-        $deseq \
-        $gff \
-        deseq2_results_annotated.csv
-    echo "Rscript: `Rscript --version | head -1`" > versions.yml
+    # Table KEGG
+    Rscript /scripts/gene_pathway_array.R .
+
+    # Plots
+    Rscript /scripts/deseq2_plots.R \
+        ${deseq_results} \
+        gene_pathway_table.tsv \
+        ${mapping_file} 
     """
 }
 
-/*
- * 9) Analyse des pathways KEGG
- */
-process PATHWAYS {
-
-    tag "pathways"
-    publishDir "${params.outdir}/pathways", mode: 'copy'
-    container "bioconductor/bioconductor_docker:RELEASE_3_17"
-
-    input:
-        path annotated
-
-    output:
-        path "kegg_pathways_up.csv"
-        path "kegg_pathways_down.csv"
-        path "kegg_up_barplot.png"
-        path "kegg_down_barplot.png"
-        path "versions.yml", emit: versions
-
-    script:
-    """
-    Rscript /scripts/run_pathways.R \
-        $annotated \
-        pathways_results
-
-    cp pathways_results/* .
-    echo "Rscript KEGG: `Rscript --version | head -1`" > versions.yml
-    """
-}
-
-/*
- * 10) Visualisation des résultats DESeq2
- */
-process PLOT_DESEQ2 {
-    publishDir "${params.outdir}/deseq2/plots", mode: 'copy'
-    container "alantrbt/deseq2:latest"
-
-    input:
-        path deseq_results
-
-    output:
-        path "deseq2_plot.png", emit: plot
-        path "versions.yml", emit: versions
-
-    script:
-    """
-    # Correction : si 'gene_name' n'existe pas, on remplace par 'gene_id' dans le script
-    sed 's/gene_name/gene_id/g' /scripts/plot_deseq2.R > plot_deseq2_tmp.R
-    Rscript plot_deseq2_tmp.R $deseq_results deseq2_plot.png
-    echo "Rscript: `Rscript --version | head -1`" > versions.yml
-    """
-}
 
 /*
  * Workflow principal
  */
 workflow {
 
-    def sample_list = file("$baseDir/samples.tsv").splitCsv(header:true, sep:'\t')
+    def sample_list = file("$baseDir/data/samples.tsv").splitCsv(header:true, sep:'\t')
 
     samples_ch = Channel.from(sample_list)
     sra_ids_ch = samples_ch.map { row -> row.sra }
@@ -312,11 +261,14 @@ workflow {
 
     all_counts = counts_ch.collect()
 
-    samples_file_ch = Channel.of(file("$baseDir/samples.tsv"))
+    samples_file_ch = Channel.of(file("$baseDir/data/samples.tsv"))
     deseq_results = DESEQ2(all_counts, samples_file_ch).results
-    annotated_ch  = ANNOTATE_GENES(deseq_results, gff_ch).annotated
-    PATHWAYS(annotated_ch)
-    PLOT_DESEQ2(deseq_results)
+
+    ANALYSIS_DESEQ2(
+    deseq_results,
+    file(params.aureowiki)
+)
+
 }
 
 
