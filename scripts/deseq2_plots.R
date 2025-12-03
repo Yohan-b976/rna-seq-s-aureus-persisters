@@ -9,6 +9,7 @@ if (!requireNamespace("scales", quietly = TRUE)) {
 library(ggplot2)
 library(ggrepel)
 library(tidyverse)
+library(scales)
 
 
 # ==== Arguments Nextflow ====
