@@ -14,7 +14,8 @@ gene_pathway <- args[2]
 mapping_path        <- args[3]
 
 # Lire résultats deseq
-res <- read.csv(deseq_results_path,row.names =1)
+res <- read.csv(deseq_results_path,row.names = "gene_id")
+
 
 # Lire table kegg 
 kegg_all <- read.table(
