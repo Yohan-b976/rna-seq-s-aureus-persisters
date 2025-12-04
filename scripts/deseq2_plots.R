@@ -60,49 +60,49 @@ res_all <- res %>%
 
     shape_point = case_when(
       log2FoldChange < -limit ~ 25,   # triangle pointe vers le bas (dépassement négatif)
-      log2FoldChange > limit  ~ 17,   # triangle pointe vers le haut (dépassement positif)
+      log2FoldChange > limit  ~ 24,   # triangle pointe vers le haut (dépassement positif)
       TRUE                    ~ 16    # point rond normal
     )
   )
 
+
 pdf("MA_plot_all_genes.pdf")
 
 p <- ggplot(res_all, aes(
-  x = baseMean,            # mean normalized count sur l'axe x
-  y = log2FC_clamped,      # log2FC clampé sur y
-  color = signif,          # variable de signification
-  shape = factor(shape_point)
+  x = baseMean,
+  y = log2FC_clamped,
+  color = signif,
+  fill  = signif
 )) +
-  geom_point(size = 2, stroke = 1, alpha = 0.7) +
-  scale_color_manual(values = c("Non-Significant" = "grey50", "Significant" = "red")) +
-  labs(
-    x = "Mean of normalized counts",
-    y = "Log2 fold change",
-    color = "Significativité (p-adj < 0.05)"
+  geom_point(
+    aes(shape = factor(shape_point)),  
+    size = 2,
+    stroke = 0.8,
+    alpha = 0.7
   ) +
+  
+  scale_shape_manual(values = c(
+    "16" = 16,   # rond normal
+    "24" = 24,   # triangle normal plein
+    "25" = 25    # triangle inversé plein
+  )) +
+
+  scale_color_manual(values = c("Non-Significant" = "grey50", "Significant" = "red")) +
+  scale_fill_manual(values = c("Non-Significant" = "grey50", "Significant" = "red")) +
+
   scale_y_continuous(limits = c(-limit, limit)) +
-  scale_x_log10() +     
+  scale_x_log10(
+    breaks = scales::trans_breaks("log10", function(x) 10^x),
+    labels = scales::trans_format("log10", scales::math_format(10^.x))
+  ) +
+
+  labs(
+    x = "Mean Normalized Count",
+    y = "Log2 Fold Change"
+  ) +
   theme_minimal() +
-  labs(x = "Mean Normalized Count", y = "Log2 Fold Change")
-# Légende
-p <- p + theme(
-  legend.box = "horizontal"
-)
-p <- p + guides(
-  color = guide_legend(order = 1),
-  shape = guide_legend(order = 2)
-)
-p <- p + theme(
-  legend.position = c(0.32, 0.08),
-  legend.background = element_blank(),
-  legend.box.background = element_blank(),
-  legend.key = element_blank()
-)
-p <- p + guides(shape = "none")
-p <- p + scale_x_log10(
-  breaks = trans_breaks("log10", function(x) 10^x),
-  labels = trans_format("log10", math_format(10^.x))
-)
+  theme(legend.position = "none")   # légende désactivée
+
 print(p)
 dev.off()
 
