@@ -29,8 +29,10 @@ rna-clean/
 │   │          └── run_deseq2.R
 │   ├── sratoolkit/
 │   │     └── Dockerfile
-│   └── subread/
-│         └── Dockerfile
+│   ├── subread/
+│   │     └── Dockerfile
+│   └── tidyverse/
+│        └── Dockerfile
 └── data/ (créé automatiquement)
 ```
 
