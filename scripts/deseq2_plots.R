@@ -59,9 +59,9 @@ res_all <- res %>%
     log2FC_clamped = pmax(pmin(log2FoldChange, limit), -limit),
 
     shape_point = case_when(
-      log2FoldChange < -limit ~ 25,   # triangle pointe vers le bas (dépassement négatif)
-      log2FoldChange > limit  ~ 24,   # triangle pointe vers le haut (dépassement positif)
-      TRUE                    ~ 16    # point rond normal
+      log2FoldChange < -limit ~ 25L,   # triangle pointe vers le bas (dépassement négatif)
+      log2FoldChange > limit  ~ 24L,   # triangle pointe vers le haut (dépassement positif)
+      TRUE                    ~ 16L    # point rond normal
     )
   )
 
