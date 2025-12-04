@@ -1,23 +1,24 @@
 # RNA-seq Reproducibility Pipeline (Nextflow + Docker)
 
-Ce dépôt contient un pipeline **Nextflow DSL2** entièrement reproductible permettant de reproduire l'analyse RNA-seq décrite dans l'article :
+Ce dépôt propose un pipeline **Nextflow DSL2** entièrement reproductible pour l’analyse RNA-seq de *Staphylococcus aureus* en conditions de persistance, basé sur l’étude :
 
-> [Nature Communications](https://www.nature.com/articles/s41467-020-15966-7) (2020) “Intracellular Staphylococcus aureus persisters upon antibiotic exposure.”
+> [Nature Communications](https://www.nature.com/articles/s41467-020-15966-7) (2020) “Intracellular Staphylococcus aureus persisters upon antibiotic exposure.”  
 
-Le pipeline suit les étapes :
+Chaque étape s’exécute dans un conteneur Docker dédié pour garantir la reproductibilité et la portabilité.
+
+**Résumé du workflow :**  
 FASTQ → trimming → download du génome → indexation → alignement → comptage → analyse différentielle.
-
 ---
 
 ##  Structure du dépôt
-
 ```
 rna-clean/
+├── README.md
+├── run.sh
 ├── main.nf
 ├── nextflow.config
-├── run.sh
-├── README.md
-├── samples.tsv
+├── reports
+├── .gitignore
 ├── containers/
 │   ├── bowtie/
 │   │     └── Dockerfile
@@ -25,15 +26,20 @@ rna-clean/
 │   │     └── Dockerfile
 │   ├── deseq2/
 │   │     ├── Dockerfile
-│   │     └── scripts/
-│   │          └── run_deseq2.R
 │   ├── sratoolkit/
 │   │     └── Dockerfile
 │   ├── subread/
 │   │     └── Dockerfile
 │   └── tidyverse/
-│        └── Dockerfile
-└── data/ (créé automatiquement)
+│         └── Dockerfile
+└── data/
+│     ├── mapping_aureowiki.tsv
+│     └── samples.tsv
+├── results (créé automatiquement)
+└── scripts/
+      ├── run_deseq2.R
+      ├── deseq2_plots.R
+      └── gene_pathway_array.R
 ```
 
 ---
@@ -50,6 +56,7 @@ Versions exactes :
 * **Samtools** : 0.1.19
 * **Subread / featureCounts** : 1.4.6-p3
 * **DESeq2** : 1.16 (R 3.4.1 via micromamba)
+* **Tidyverse** : 4.3.2 (R, avec bioconductor-keggrest, tidyverse, venndiagram, ggrepel, scales)
 
 Build des images :
 
@@ -59,6 +66,7 @@ cd containers/cutadapt && docker build -t alantrbt/cutadapt:1.11 .
 cd containers/sratoolkit && docker build -t alantrbt/sratoolkit:latest .
 cd containers/subread && docker build -t alantrbt/subread:latest .
 cd containers/deseq2 && docker build -t alantrbt/deseq2:latest .
+cd containers/tidyverse && docker build -t alantrbt/tidyverse:4.3.2 .
 ```
 
 ---
@@ -68,7 +76,7 @@ cd containers/deseq2 && docker build -t alantrbt/deseq2:latest .
 Les identifiants SRA proviennent de l'étude originale. Ils sont listés dans :
 
 ```
-SRA_ref/sra_ids.txt
+data/samples.tsv
 ```
 
 Ce sont des **lectures single-end**.
@@ -105,10 +113,11 @@ results/
 └── deseq2/
 ```
 
-Le fichier final principal est :
+Les productions finales principales sont :
 
 ```
-results/deseq2/deseq2_results.csv
+results/deseq2/deseq2_results.csv   # Résultats tabulaires DESeq2
+results/deseq2/plots/               # Graphiques et visualisations générés
 ```
 
 ---
@@ -134,15 +143,40 @@ Le code du pipeline complet est dans `main.nf`.
 Le script R utilisé est embarqué dans le conteneur :
 
 ```
-containers/deseq2/scripts/run_deseq2.R
+scripts/
+├── run_deseq2.R
+├── deseq2_plots.R
+└── gene_pathway_array.R
 ```
 
-Il :
+Trois scripts R sont utilisés pour l’analyse différentielle et la production des graphiques :
 
-* fusionne les fichiers `counts_*`
-* génère la matrice d'expression
-* applique DESeq2
-* écrit le fichier `deseq2_results.csv`
+scripts/run_deseq2.R :
+
+* Fusionne les fichiers `counts_*`
+* Génère la matrice d'expression
+* Applique DESeq2
+* Écrit le fichier `deseq2_results.csv`
+
+scripts/deseq2_plots.R :
+
+* Génère les graphiques principaux (MA plots, visualisations des gènes liés à la traduction, etc.) à partir des résultats DESeq2
+* Produit des fichiers PDF dans results/deseq2/plots/
+
+scripts/gene_pathway_array.R :
+
+* Crée la table d’association gènes / pathways à partir de KEGG
+* Utilisée pour annoter les résultats et les graphiques
+---
+## Fichiers de métadonnées et d’annotation
+
+* data/samples.tsv :
+Contient la liste des échantillons utilisés dans l’analyse, avec leur nom, condition biologique (control/persister) et identifiant SRA. Ce fichier est utilisé pour associer chaque fichier de comptage à sa condition expérimentale lors de l’analyse différentielle.
+
+* data/mapping_aureowiki.tsv :
+Fichier d’annotation des gènes de Staphylococcus aureus, issu d’AureoWiki. Il associe chaque locus_tag à un symbole, une description du produit et un identifiant de gène. Ce fichier permet d’enrichir les résultats et les graphiques avec des informations fonctionnelles et des annotations biologiques.
+
+> N’hésitez pas à modifier ou compléter ces fichiers selon vos besoins pour analyser d’autres conditions, échantillons ou jeux de gènes.
 
 ---
 
@@ -160,7 +194,7 @@ nextflow run main.nf -resume
 
 ##  Références
 
-* Article original : Nature Communications (2020)
+> [Nature Communications](https://www.nature.com/articles/s41467-020-15966-7) (2020) “Intracellular Staphylococcus aureus persisters upon antibiotic exposure.”  
 
 ---
 
@@ -170,4 +204,3 @@ nextflow run main.nf -resume
 - Beaumatin Yohan
 - Faramus François
 - Bouteville Tristan
-
