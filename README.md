@@ -119,7 +119,9 @@ Les productions finales principales sont :
 results/deseq2/deseq2_results.csv   # Résultats tabulaires DESeq2
 results/deseq2/plots/               # Graphiques et visualisations générés
 ```
-
+> Remarque :
+> Le nombre de CPU utilisé par chaque étape du pipeline est défini par le paramètre cpus dans le fichier nextflow.config (valeur par défaut : 2).
+> Adaptez cette valeur selon les ressources disponibles sur votre machine ou serveur pour optimiser les performances du workflow.
 ---
 
 ##  Description du workflow
