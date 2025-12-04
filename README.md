@@ -66,7 +66,7 @@ cd containers/cutadapt && docker build -t alantrbt/cutadapt:1.11 .
 cd containers/sratoolkit && docker build -t alantrbt/sratoolkit:latest .
 cd containers/subread && docker build -t alantrbt/subread:latest .
 cd containers/deseq2 && docker build -t alantrbt/deseq2:latest .
-cd containers/tidyverse && docker build -t alantrbt/tidyverse:4.3.2 .
+cd containers/tidyverse && docker build -t alantrbt/tidyverse:latest .
 ```
 
 ---
